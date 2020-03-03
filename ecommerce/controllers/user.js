@@ -1,5 +1,8 @@
 
 const User = require('../schema_models/userSchema.js')
+const jwt = require('jsonwebtoken') // to generate signed token
+const expressJwt = require('express-jwt') //for authorization check
+
 const {errorHandler} = require('../Helpers/DbEroor_Message.js')
 
 exports.signup = (req,res) => {
@@ -19,4 +22,47 @@ exports.signup = (req,res) => {
         res.json({user});
 
     });
+}
+
+exports.signIn = (req,res) => {
+    //fiNd the user base on email-id
+
+    const{email,password} = req.body;
+    User.findOne({email},(err,user) => {
+        if(err || !user)
+        {
+            return res.status(400).json({err: "user does not exist....plzz signup first"});
+        }  
+
+        //else authenticate the user.....user found means email-password match
+        //create authenticate method in user model
+        //generate the signed token with user-id and secret
+
+        if(!user.authenticate(password))
+        {
+            return res.status(401).json({err: "email and password does not match"});
+        }
+        
+        const token = jwt.sign({_id:user._id}, process.env.JWT_SECRET)
+             //here we persist the token as "t" in cookie with expiry date
+        res.cookie('t',token,{expire: new Date() + 9999})
+            //return respose with user and token to frontend user
+        const {_id,name,email,role} = user
+        return res.json({token,user : {_id,name,email,role}})
+    });
+
 };
+
+exports.signOut = (req,res) => {
+    res.clearCookie("t");
+    res.json({message : "signOut successfully"});
+};
+
+//protecting routs
+//only sign in user will have access
+
+exports.requireSignIn = expressJwt({
+
+    secret : process.env.JWT_SECRET,
+    userProperty : "auth"
+});
