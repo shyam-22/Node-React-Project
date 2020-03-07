@@ -9,14 +9,20 @@ const expressValidator = require('express-validator')
 require('dotenv').config()
 
 //import all routes file below here
-const userRoutes = require(`./routes/user.js`)
+const authRoutes = require(`./routes/auth.js`);
+const userRoutes = require(`./routes/user.js`);
+const categoryRoutes = require(`./routes/category.js`);
+const productRoutes = require(`./routes/product.js`);
+
+
+
 
 //app
 const app=express()
 
 //db connection
 mongoose
-    .connect(process.env.DATABASE,{useNewUrlParser: true, useCreateIndex: true})
+    .connect(process.env.DATABASE,{useNewUrlParser: true, useCreateIndex: true, useUnifiedTopology : true})
     .then( () => console.log(`connected to db`));
     //.catch( error => console.log(`something went wrong ${error.message}`))
 
@@ -29,7 +35,13 @@ app.use(expressValidator());
 
 
 //routes middleware
+app.use("/api",authRoutes);
 app.use("/api",userRoutes);
+app.use("/api",categoryRoutes);
+app.use("/api",productRoutes);
+
+
+
 
 
 
