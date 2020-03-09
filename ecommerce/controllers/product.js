@@ -150,5 +150,99 @@ exports.list = (req,res) =>{
 //7)By Arrival = /product?sortBy = CreatedAt & Order = desc&Limit=4
 //if no params are send, then all products are return
 
+//8) List Related Product..........................it will the find the product based on product category
+//others product that has same category ......will be returned
+exports.listRelated = (req,res) =>{
+    let limit = req.query.limit ? parseInt(req.query.limit) : 7;
 
+    Product.find({_id : {$ne : req.product}, category: req.product.category })
+            .limit(limit)
+            .populate("Category", "_id name")
+            .exec((err,products) => {
+                if(err)
+                {
+                    return res.status(400).json({error : "Product not found"});
+                }
+                res.json(products);
+            });
+}; 
+
+
+//9) List Related category..........................it will the find the product based on product category
+//others product that has same category ......will be returned
+exports.listCategory = (req,res) =>{
+    Product.distinct("category", {}, (err,category) => {
+        if(err)
+        {
+            return res.status(400).json({error : "category not found"});
+        }
+        res.json(category);
+    });
+};
+
+
+    /**
+     * list products by search
+     * we will implement product search in react frontend
+     * we will show categories in checkbox and price range in radio buttons
+     * as the user clicks on those checkbox and radio buttons
+     *    | |  |   |   |   | | | 
+     * we will make api request and show the products to users based on what he wants
+     */
+     
+    // route - make sure its post
+    //router.post("/products/by/search", listBySearch);
+     
+    exports.listBySearch = (req, res) => {
+        let order = req.body.order ? req.body.order : "desc";
+        let sortBy = req.body.sortBy ? req.body.sortBy : "_id";
+        let limit = req.body.limit ? parseInt(req.body.limit) : 100;
+        let skip = parseInt(req.body.skip);
+        let findArgs = {};
+     
+        // console.log(order, sortBy, limit, skip, req.body.filters);
+        // console.log("findArgs", findArgs);
+     
+        for (let key in req.body.filters) {
+            if (req.body.filters[key].length > 0) {
+                if (key === "price") 
+                {
+                    findArgs[key] = 
+                    {
+                        $gte: req.body.filters[key][0],
+                        $lte: req.body.filters[key][1]
+                    };
+                } 
+                else 
+                {
+                    findArgs[key] = req.body.filters[key];
+                }
+            }
+        }
+     
+        Product.find(findArgs)
+            .select("-photo")
+            .populate("Category")
+            .sort([[sortBy, order]])
+            .skip(skip)
+            .limit(limit)
+            .exec((err, data) => {
+                if (err) 
+                {
+                    return res.status(400).json({error: "Products not found"});
+                }
+                res.json({size: data.length,data});
+            });
+    };
+
+    //10) Bring a photo based on the Product ID
+    
+    exports.photo = (req,res,next) => {
+        if(req.product.photo.data)
+        {
+            res.set("Content-Type",req.product.photo.contentType)
+            return res.send(req.product.photo.data)
+        }
+        next();
+    }
 
